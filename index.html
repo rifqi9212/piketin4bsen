@@ -108,6 +108,11 @@ tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter'] }, colors: 
             <button id="btnKamera" onclick="startCamera()" class="bg-[#f3f7fd] border py-3 rounded-xl text-sm font-semibold">Aktifkan Kamera</button>
             <button id="btnFoto" onclick="takePhoto()" class="hidden bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-xl text-sm font-bold shadow-lg shadow-blue-200">Konfirmasi Absensi</button>
           </div>
+          <div class="lg:col-span-5 space-y-4">
+          <div class="bg-white rounded-[24px] border shadow-sm overflow-hidden"><div class="p-6 border-b"><h3 class="font-bold text-[15px]">2. Tanda Tangan Digital</h3><p class="text-xs text-slate-500 mt-1">Gambar tanda tangan di bawah ini</p></div><div class="p-3"><div class="bg-[#fcfdff] border-2 border-dashed border-blue-200 rounded-[16px] relative"><canvas id="sigCanvas" width="500" height="240" class="w-full h-[220px] rounded-[16px] cursor-crosshair"></canvas><span class="absolute bottom-2 right-3 text-[10px] text-slate-300 pointer-events-none">Tanda tangan di sini</span></div><div class="grid grid-cols-2 gap-2 mt-3"><button onclick="clearSig()" class="bg-white border py-3 rounded-xl text-xs font-bold">Hapus TTD</button><button onclick="saveSig()" class="bg-slate-900 text-white py-3 rounded-xl text-xs font-bold">Simpan TTD</button></div><p id="ttdOk" class="hidden mt-3 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 p-3 rounded-xl text-center">✅ Tanda tangan tersimpan</p></div></div>
+
+          <div class="bg-slate-900 rounded-[24px] p-6 text-white relative overflow-hidden"><div class="absolute w-64 h-64 bg-brand-500/30 rounded-full blur-3xl -right-20 -top-20"></div><p class="text-[11px] font-bold tracking-widest text-blue-300 uppercase relative">Final Step</p><h4 class="text-[18px] font-bold mt-2 leading-tight relative">Konfirmasi Absensi<br>Piket Kelas</h4><div class="mt-5 space-y-2 relative"><div class="flex justify-between bg-white/10 backdrop-blur rounded-xl px-4 py-3 text-xs"><span class="text-white/70">Foto Piket</span><span id="checkFoto" class="font-bold text-red-300">❌ Belum</span></div><div class="flex justify-between bg-white/10 backdrop-blur rounded-xl px-4 py-3 text-xs"><span class="text-white/70">Tanda Tangan</span><span id="checkTtd" class="font-bold text-red-300">❌ Belum</span></div></div><button id="btnSubmitAbsen" onclick="submitAbsen()" disabled class="mt-5 w-full bg-white/10 text-white/30 py-4 rounded-xl font-bold text-sm cursor-not-allowed transition">Lengkapi Foto & TTD Dulu</button><div id="myStatus" class="mt-4 text-xs text-slate-400"></div></div>
+         </div>
         </div>
 
         <div class="md:col-span-5 space-y-4">
@@ -138,6 +143,9 @@ tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter'] }, colors: 
       </div>
       <div id="infoList" class="space-y-3"></div>
     </div>
+
+    <!-- POPUP NOTIF -->
+    <div id="inAppNotif" class="fixed top-5 left-1/2 -translate-x-1/2 z-[100] hidden animate-bounce"><div class="bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[360px]"><div class="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center">📢</div><div class="flex-1"><p class="text-[10px] font-bold text-blue-300 tracking-widest">PENGUMUMAN BARU</p><p id="inAppNotifText" class="text-sm font-medium"></p></div><button onclick="document.getElementById('inAppNotif').classList.add('hidden')" class="text-white/50">✕</button></div></div>
 
     <!-- RECAP -->
     <div id="recap" class="tab-content hidden">
