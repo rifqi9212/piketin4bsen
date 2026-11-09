@@ -89,7 +89,7 @@ function cekJam(){
   const jamStr = now.toLocaleTimeString('id-ID',{timeZone:'Asia/Jakarta'});
   document.getElementById('jamInfo').innerText = `Jam WIB Sekarang: ${jamStr} | Hari: ${["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"][day]}`;
   
-  const boleh = (day>=1 && day<=5) && (jam >= 14 + 20/60 && jam <= 15 + 45/60);
+  const boleh = (day>=1 && day<=5) && (jam >= 18 + 11/60 && jam <= 19 + 45/60);
   // UNTUK TESTING, UBAH JADI true JIKA INGIN BYPASS JAM
   const bypass = false; // ganti true untuk coba kapan saja
   
@@ -110,25 +110,51 @@ function cekJam(){
 
 // KAMERA & UPLOAD
 async function startCamera(){
-  if(!cekJam()) return alert('Di luar jam absensi!');
+  if(!cekJam()) return alert('Absensi hanya 14:20-15:45 WIB!');
   try{
-    stream = await navigator.mediaDevices.getUserMedia({video:true});
-    document.getElementById('video').srcObject = stream;
-    document.getElementById('btnKamera').style.display='none';
-    document.getElementById('btnFoto').style.display='block';
-  }catch(e){ alert('Kamera tidak bisa diakses: '+e.message); }
+    // GANTI environment -> user (kamera depan HP)
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user" }, 
+      audio: false
+    });
+    const videoEl = document.getElementById('video');
+    videoEl.srcObject = stream;
+    videoEl.classList.remove('hidden');
+    // Mirror biar kayak selfie HP
+    videoEl.style.transform = "scaleX(-1)";
+    document.getElementById('preview').style.transform = "scaleX(-1)";
+    
+    document.getElementById('placeholderCam').classList.add('hidden');
+    document.getElementById('btnKamera').classList.add('hidden');
+    document.getElementById('btnFoto').classList.remove('hidden');
+  }catch(e){
+    alert('Kamera error: ' + e.message + '\nPastikan sudah kasih izin kamera di HP');
+  }
 }
 
-function takePhoto(){
-  const video = document.getElementById('video');
-  const canvas = document.getElementById('canvas');
-  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video,0,0);
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+function capturePhoto(){
+  const v=document.getElementById('video');
+  const c=document.createElement('canvas');
+  c.width=v.videoWidth;
+  c.height=v.videoHeight;
+  const ctx = c.getContext('2d');
+  // Balik lagi pas capture biar tulisan gak kebalik
+  ctx.translate(c.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(v,0,0);
   
-  document.getElementById('preview').src = dataUrl;
-  document.getElementById('preview').style.display='block';
-  stream.getTracks().forEach(t=>t.stop());
+  tempFoto=c.toDataURL('image/jpeg',0.7);
+  const preview = document.getElementById('preview');
+  preview.src=tempFoto;
+  preview.classList.remove('hidden');
+  // Preview tetap mirror biar natural
+  preview.style.transform = "scaleX(-1)";
+  document.getElementById('video').classList.add('hidden');
+  if(stream) stream.getTracks().forEach(t=>t.stop());
+  document.getElementById('fotoOk').classList.remove('hidden');
+  document.getElementById('checkFoto').innerText='✅ Sudah';
+  document.getElementById('checkFoto').className='font-bold text-emerald-400';
+  validate();
 
   // SIMPAN KE RECAP
   const now = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Jakarta'}));
