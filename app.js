@@ -89,7 +89,7 @@ function cekJam(){
   const jamStr = now.toLocaleTimeString('id-ID',{timeZone:'Asia/Jakarta'});
   document.getElementById('jamInfo').innerText = `Jam WIB Sekarang: ${jamStr} | Hari: ${["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"][day]}`;
   
-  const boleh = (day>=1 && day<=5) && (jam >= 18 + 20/60 && jam <= 20 + 45/60);
+  const boleh = (day>=1 && day<=5) && (jam >= 6 + 20/60 && jam <= 16 + 45/60);
   // UNTUK TESTING, UBAH JADI true JIKA INGIN BYPASS JAM
   const bypass = true; // ganti true untuk coba kapan saja
   
@@ -98,7 +98,7 @@ function cekJam(){
   
   if(!boleh && !bypass){
     btnK.disabled = true;
-    status.innerText = 'Absensi hanya dibuka jam 18:20 - 20:45 WIB Senin-Jumat';
+    status.innerText = 'Absensi hanya dibuka jam 06:20 - 16:45 WIB Senin-Jumat';
     status.style.color = 'red';
   } else {
     btnK.disabled = false;
@@ -110,7 +110,7 @@ function cekJam(){
 
 // KAMERA & UPLOAD
 async function startCamera(){
-  if(!cekJam()) return alert('Absensi hanya 18:20-20:45 WIB!');
+  if(!cekJam()) return alert('Absensi hanya 06:20-16:45 WIB!');
   try{
     // GANTI environment -> user (kamera depan HP)
     stream = await navigator.mediaDevices.getUserMedia({
