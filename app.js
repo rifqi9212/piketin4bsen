@@ -82,12 +82,14 @@ function renderBeranda(){
 
 function logout(){ localStorage.clear(); location.reload(); }
 
-// TABS
+// GANTI showTab jadi ini
 function showTab(id){
-  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  event.target.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(c=>{c.classList.add('hidden'); c.classList.remove('grid');});
+  const el=document.getElementById(id);
+  el.classList.remove('hidden');
+  if(id==='beranda' || id==='jadwal') el.classList.add('grid');
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('bg-white','shadow-sm','border'));
+  document.getElementById('btn-'+id).classList.add('bg-white','shadow-sm','border');
 }
 
 function renderJadwal(){
