@@ -24,50 +24,6 @@
 <div id="mainPage" class="hidden min-h-screen">
 <header class="h-[64px] bg-white border-b sticky top-0 z-20 flex items-center"><div class="max-w-[1280px] mx-auto w-full px-6 flex justify-between items-center"><div class="flex items-center gap-8"><div class="flex items-center gap-2 font-extrabold"><div class="w-8 h-8 bg-brand-600 text-white rounded-lg flex items-center justify-center">P</div> PiketIn</div><nav class="hidden md:flex items-center gap-1 bg-[#f3f7fd] p-1 rounded-full border"><button onclick="showTab('jadwal')" id="btn-jadwal" class="tab-btn bg-white shadow-sm border px-5 py-2 rounded-full text-xs font-bold">Jadwal Piket</button><button onclick="showTab('absensi')" id="btn-absensi" class="tab-btn px-5 py-2 rounded-full text-xs font-bold text-slate-500">Absensi</button><button onclick="showTab('info')" id="btn-info" class="tab-btn px-5 py-2 rounded-full text-xs font-bold text-slate-500 relative">Informasi <span id="notifBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-black text-[10px] w-5 h-5 flex items-center justify-center rounded-full">0</span></button><button onclick="showTab('recap')" id="recapTabBtn" class="tab-btn hidden px-5 py-2 rounded-full text-xs font-bold text-slate-500">Rekap Admin</button></nav></div><div class="flex items-center gap-3"><div id="jamInfo" class="hidden md:block text-[11px] font-mono bg-slate-900 text-white px-3 py-1.5 rounded-full"></div><div id="userInfo" class="text-xs font-semibold bg-[#f3f7fd] border px-3 py-2 rounded-full"></div><button onclick="logout()" class="w-8 h-8 rounded-full bg-white border flex items-center justify-center">↪</button></div></div></header>
 <img src="imej/goloo.png" width="350" height="200">
-<nav class="hidden md:flex items-center gap-1 bg-[#f3f7fd] p-1 rounded-full border">
-  <button onclick="showTab('beranda')" id="btn-beranda" class="tab-btn bg-white shadow-sm border px-5 py-2 rounded-full text-xs font-bold">Beranda</button>
-  <button onclick="showTab('jadwal')" id="btn-jadwal" class="tab-btn px-5 py-2 rounded-full text-xs font-bold text-slate-500">Jadwal Piket</button>
-  <button onclick="showTab('absensi')" id="btn-absensi" class="tab-btn px-5 py-2 rounded-full text-xs font-bold text-slate-500">Absensi Live</button>
-  <button onclick="showTab('recap')" id="recapTabBtn" class="tab-btn hidden px-5 py-2 rounded-full text-xs font-bold text-slate-500">Recap Admin</button>
-</nav>
-
-<!-- BERANDA BARU -->
-<div id="beranda" class="tab-content">
-  <div class="grid md:grid-cols-12 gap-6">
-    <!-- KIRI: Status User + Tanggal -->
-    <div class="md:col-span-5 space-y-4">
-      <div class="bg-brand-600 rounded-[24px] p-7 text-white relative overflow-hidden">
-        <div class="absolute w-72 h-72 bg-white/20 rounded-full blur-3xl -right-20 -top-20"></div>
-        <p class="text-[11px] font-bold tracking-widest text-blue-200 uppercase relative">Portal PiketIn</p>
-        <h2 id="berandaTanggal" class="text-[28px] font-extrabold leading-none mt-2 relative">--</h2>
-        <p id="berandaHari" class="text-blue-100 text-sm mt-2 relative">--</p>
-        
-        <div class="mt-6 bg-white/10 backdrop-blur rounded-2xl p-4 relative">
-          <p class="text-[11px] text-blue-200 uppercase font-bold">Status Pengguna</p>
-          <p id="berandaNama" class="font-bold text-lg mt-1">-</p>
-          <p id="berandaRole" class="text-xs text-blue-100">-</p>
-          <div id="berandaStatusPiket" class="mt-3 text-xs"></div>
-        </div>
-      </div>
-
-      <!-- Buat Pengumuman (hanya Admin) -->
-      <div id="adminInfoFormBeranda" class="hidden bg-white rounded-[20px] border p-6 shadow-sm">
-        <h3 class="font-bold text-sm">📢 Buat Pengumuman (Admin)</h3>
-        <textarea id="infoText" placeholder="Tulis pengumuman..." class="mt-3 w-full bg-[#f3f7fd] border rounded-xl p-4 text-sm min-h-[90px] outline-none focus:border-brand-500"></textarea>
-        <button onclick="kirimInfo()" class="mt-3 bg-brand-600 text-white w-full py-3 rounded-xl font-bold text-sm">Publikasikan</button>
-      </div>
-    </div>
-
-    <!-- KANAN: Informasi dipindah kesini -->
-    <div class="md:col-span-7">
-      <div class="bg-white rounded-[20px] border px-5 py-4 flex justify-between items-center">
-        <p class="font-bold text-sm">Papan Informasi Kelas</p>
-        <span class="text-[11px] text-slate-500"><span id="infoCount">0</span> pengumuman • Permanen</span>
-      </div>
-      <div id="infoList" class="space-y-3 mt-3 max-h-[520px] overflow-auto pr-1"></div>
-    </div>
-  </div>
-</div>
 <main class="max-w-[1280px] mx-auto px-4 md:px-6 py-6">
 <div id="jadwal" class="tab-content grid grid-cols-1 md:grid-cols-12 gap-4"></div>
 
@@ -84,6 +40,7 @@
 </div>
 </div>
 
+<div id="info" class="tab-content hidden max-w-3xl"><div id="adminInfoForm" class="hidden bg-white rounded-[20px] border p-6 mb-6 shadow-sm"><h3 class="font-bold text-sm">📢 Buat Pengumuman Baru (Admin)</h3><textarea id="infoText" placeholder="Contoh: Besok piket jam 06:30 ada sidak..." class="mt-3 w-full bg-[#f3f7fd] border rounded-xl p-4 text-sm min-h-[110px] outline-none focus:bg-white focus:border-brand-500"></textarea><button onclick="kirimInfo()" class="mt-3 bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-xl text-sm font-bold w-full shadow-lg shadow-blue-200">Kirim Notifikasi ke Semua Siswa</button></div><div class="bg-white rounded-[16px] border px-5 py-3 flex justify-between items-center mb-4"><p class="font-bold text-sm">Papan Informasi Kelas</p><span class="text-[11px] text-slate-500"><span id="infoCount">0</span> pengumuman</span></div><div id="infoList" class="space-y-3"></div></div>
 
 <div id="recap" class="tab-content hidden"><div class="flex justify-between items-center mb-4"><h3 class="font-bold">Rekap Data Piket Foto & Tanda Tangan</h3><div class="flex gap-2"><button onclick="exportExcel()" class="bg-brand-600 text-white px-5 py-2.5 rounded-full text-xs font-bold">📥 Export Excel</button><button onclick="hapusRecap()" class="bg-white border px-5 py-2.5 rounded-full text-xs font-bold text-red-500">Hapus</button></div></div><div class="bg-white rounded-[20px] border overflow-hidden"><div class="overflow-auto"><table id="recapTable" class="w-full text-sm"><thead class="bg-[#f3f7fd] text-[11px] uppercase font-bold tracking-widest text-slate-500"><tr><th class="p-4 text-left">Foto</th><th class="p-4 text-left">Tanda Tangan</th><th class="p-4 text-left">Nama</th><th class="p-4">Hari</th><th class="p-4">Tanggal</th><th class="p-4">Jam</th></tr></thead><tbody class="divide-y"></tbody></table></div></div></div>
 
@@ -93,6 +50,7 @@
 const siswaList={"alfajri":1,"ainiya":2,"aji":3,"amira":4,"aurel":5,"bayu":6,"chanisa":7,"charisya":8,"daffa":9,"deidan":10,"dzaky":11,"farizt":12,"fellysita":13,"ivander":14,"jhonatan":15,"nadia":16,"kemal":17,"kiara":18,"lintang":19,"tegar":20,"ayoem":21,"rayhan m":22,"rifqi":23,"roman":24,"alfiara":25,"nazila":26,"neysha":27,"hamidah":28,"raihan w":29,"raisa":30,"rasya a":31,"rasya z":32,"reza":33,"septiana":34,"zaidan":35,"zilfanny":36};
 const jadwal={"Senin":["Ayoem","Kiara","Lintang","Septiana","Ainiya","Aji","Farizt","Daffa"],"Selasa":["Aurel","Amira","Bayu","Chanisa","Alfajri","Reza","Zaidan"],"Rabu":["Roman","Rifqi","Rasya Z","Dzaky","Nadia","Nazila","Neysha"],"Kamis":["Ivander","Kemal","Charisya","Tegar","Raisa","Hamidah","Rayhan M"],"Jumat":["Rasya A","Raihan W","Fellysita","Deidan","Zilfanny","Jhonatan","Alfiara"]};
 let currentUser=null,role=null,stream=null,tempFoto=null,tempTtd=null,isDrawing=false,hasDrawn=false,lastInfoCount=0;
+
 function login(){const u=document.getElementById('username').value.trim().toLowerCase();const p=document.getElementById('password').value.trim();if(u==='aditya'&&p==='242510677'){role='admin';currentUser='Aditya';}else if(siswaList[u]&&String(siswaList[u])===p){role='siswa';let n=u.split(' ').map(s=>s.charAt(0).toUpperCase()+s.slice(1)).join(' ');if(u==='rayhan m')n='Rayhan M';if(u==='raihan w')n='Raihan W';if(u==='rasya a')n='Rasya A';if(u==='rasya z')n='Rasya Z';currentUser=n.charAt(0).toUpperCase()+n.slice(1);}else return document.getElementById('loginMsg').innerText='Nama / password salah!';localStorage.setItem('piket_user',currentUser);localStorage.setItem('piket_role',role);Notification.requestPermission();masukApp();}
 function masukApp(){currentUser=localStorage.getItem('piket_user');role=localStorage.getItem('piket_role');if(!currentUser)return;document.getElementById('loginPage').classList.add('hidden');document.getElementById('mainPage').classList.remove('hidden');document.getElementById('userInfo').innerText=currentUser+' • '+role.toUpperCase();if(role==='admin'){document.getElementById('recapTabBtn').classList.remove('hidden');document.getElementById('adminInfoForm').classList.remove('hidden');}renderJadwal();renderInfo();renderRecap();cekJam();initSig();lastInfoCount=JSON.parse(localStorage.getItem('piket_info')||'[]').length;setInterval(()=>{cekJam();cekInfoBaru();},4000);}
 // FIX PALING PENTING: JANGAN CLEAR SEMUA!

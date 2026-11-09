@@ -39,57 +39,31 @@ function login(){
   masukApp();
 }
 
-function renderBeranda(){
-  const now = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Jakarta'}));
-  const hariMap = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
-  const bulanMap = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
-  
-  document.getElementById('berandaTanggal').innerText = `${now.getDate()} ${bulanMap[now.getMonth()]} ${now.getFullYear()}`;
-  document.getElementById('berandaHari').innerText = `${hariMap[now.getDay()]} • ${now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})} WIB`;
-  document.getElementById('berandaNama').innerText = currentUser;
-  document.getElementById('berandaRole').innerText = role.toUpperCase() + (role==='siswa' ? ` • No Absen ${siswaList[currentUser.toLowerCase()] || '-'}` : ' • Administrator Kelas');
-}
+function masukApp(){
+  currentUser = localStorage.getItem('piket_user');
+  role = localStorage.getItem('piket_role');
+  if(!currentUser) return;
 
-// TAMBAH FUNGSI BARU INI
-function renderBeranda(){
-  const now = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Jakarta'}));
-  const hariMap = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
-  const bulanMap = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
-  
-  document.getElementById('berandaTanggal').innerText = `${now.getDate()} ${bulanMap[now.getMonth()]} ${now.getFullYear()}`;
-  document.getElementById('berandaHari').innerText = `${hariMap[now.getDay()]} • ${now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})} WIB`;
-  document.getElementById('berandaNama').innerText = currentUser;
-  document.getElementById('berandaRole').innerText = role.toUpperCase() + (role==='siswa' ? ` • No Absen ${siswaList[currentUser.toLowerCase()] || '-'}` : ' • Administrator Kelas');
-
-  // Status piket hari ini
-  const jadwalHariIni = jadwal[hariMap[now.getDay()]] || [];
-  const isPiketHariIni = jadwalHariIni.some(n => n.toLowerCase() === currentUser.toLowerCase());
-  const recap = JSON.parse(localStorage.getItem('piket_recap')||'[]');
-  const todayStr = now.toLocaleDateString('id-ID');
-  const sudahAbsen = recap.find(r=>r.nama===currentUser && r.tanggal===todayStr);
-
-  document.getElementById('berandaStatusPiket').innerHTML = `
-    <div class="flex gap-2">
-      <span class="px-3 py-1 rounded-full text-[11px] font-bold ${isPiketHariIni?'bg-emerald-400 text-slate-900':'bg-white/20 text-white'}">${isPiketHariIni?'JADWAL PIKET HARI INI':'BUKAN JADWAL HARI INI'}</span>
-      <span class="px-3 py-1 rounded-full text-[11px] font-bold ${sudahAbsen?'bg-white text-brand-700':'bg-amber-300 text-slate-900'}">${sudahAbsen?'SUDAH ABSEN':'BELUM ABSEN'}</span>
-    </div>
-    ${sudahAbsen ? `<p class="mt-2 text-[11px] text-blue-100">Absen jam ${sudahAbsen.jam} • ${sudahAbsen.hari}</p>` : ''}
-  `;
-
-  if(role==='admin') document.getElementById('adminInfoFormBeranda').classList.remove('hidden');
-  else document.getElementById('adminInfoFormBeranda').classList.add('hidden');
+  document.getElementById('loginPage').classList.remove('active');
+  document.getElementById('mainPage').classList.add('active');
+  document.getElementById('userInfo').innerText = `${currentUser} (${role})`;
+  if(role==='admin'){
+    document.getElementById('recapTabBtn').style.display='block';
+    document.getElementById('adminInfoForm').style.display='block';
+  }
+  renderJadwal(); renderInfo(); renderRecap(); cekJam(); 
+  setInterval(cekJam, 60000);
+  cekPeringatanTidakPiket();
 }
 
 function logout(){ localStorage.clear(); location.reload(); }
 
-// GANTI showTab jadi ini
+// TABS
 function showTab(id){
-  document.querySelectorAll('.tab-content').forEach(c=>{c.classList.add('hidden'); c.classList.remove('grid');});
-  const el=document.getElementById(id);
-  el.classList.remove('hidden');
-  if(id==='beranda' || id==='jadwal') el.classList.add('grid');
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('bg-white','shadow-sm','border'));
-  document.getElementById('btn-'+id).classList.add('bg-white','shadow-sm','border');
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
 }
 
 function renderJadwal(){
@@ -115,7 +89,7 @@ function cekJam(){
   const jamStr = now.toLocaleTimeString('id-ID',{timeZone:'Asia/Jakarta'});
   document.getElementById('jamInfo').innerText = `Jam WIB Sekarang: ${jamStr} | Hari: ${["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"][day]}`;
   
-  const boleh = (day>=1 && day<=5) && (jam >= 18 + 11/60 && jam <= 19 + 45/60);
+  const boleh = (day>=1 && day<=5) && (jam >= 18 + 20/60 && jam <= 20 + 45/60);
   // UNTUK TESTING, UBAH JADI true JIKA INGIN BYPASS JAM
   const bypass = false; // ganti true untuk coba kapan saja
   
@@ -124,7 +98,7 @@ function cekJam(){
   
   if(!boleh && !bypass){
     btnK.disabled = true;
-    status.innerText = 'Absensi hanya dibuka jam 14:20 - 15:45 WIB Senin-Jumat';
+    status.innerText = 'Absensi hanya dibuka jam 18:20 - 20:45 WIB Senin-Jumat';
     status.style.color = 'red';
   } else {
     btnK.disabled = false;
