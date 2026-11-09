@@ -91,7 +91,7 @@ function cekJam(){
   
   const boleh = (day>=1 && day<=5) && (jam >= 18 + 20/60 && jam <= 20 + 45/60);
   // UNTUK TESTING, UBAH JADI true JIKA INGIN BYPASS JAM
-  const bypass = false; // ganti true untuk coba kapan saja
+  const bypass = true; // ganti true untuk coba kapan saja
   
   const btnK = document.getElementById('btnKamera');
   const status = document.getElementById('absenStatus');
