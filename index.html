@@ -13,6 +13,9 @@ tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter'] }, colors: 
 <style> *{font-family:Inter} .scrollbar-hide::-webkit-scrollbar{display:none} </style>
 </head>
 <body class="bg-[#f3f7fd] text-slate-800">
+  
+<!-- POPUP NOTIF -->
+<div id="inAppNotif" class="fixed top-5 left-1/2 -translate-x-1/2 z-[100] hidden animate-bounce"><div class="bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[360px]"><div class="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center">📢</div><div class="flex-1"><p class="text-[10px] font-bold text-blue-300 tracking-widest">PENGUMUMAN BARU</p><p id="inAppNotifText" class="text-sm font-medium"></p></div><button onclick="document.getElementById('inAppNotif').classList.add('hidden')" class="text-white/50">✕</button></div></div>
 
 <!-- LOGIN - BLUE CORPORATE -->
 <div id="loginPage" class="min-h-screen grid md:grid-cols-2">
