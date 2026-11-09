@@ -110,7 +110,7 @@ function cekJam(){
 
 // KAMERA & UPLOAD
 async function startCamera(){
-  if(!cekJam()) return alert('Absensi hanya 14:20-15:45 WIB!');
+  if(!cekJam()) return alert('Absensi hanya 18:20-20:45 WIB!');
   try{
     // GANTI environment -> user (kamera depan HP)
     stream = await navigator.mediaDevices.getUserMedia({
