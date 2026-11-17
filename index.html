@@ -65,6 +65,74 @@ const jadwal={"Senin":["Ayoem","Kiara","Lintang","Septiana","Ainiya","Aji","Fari
 let currentUser=null,role=null,stream=null,tempFoto=null,tempTtd=null,isDrawing=false,hasDrawn=false,lastInfoCount=0;
 
 function login(){const u=document.getElementById('username').value.trim().toLowerCase();const p=document.getElementById('password').value.trim();if(u==='aditya'&&p==='242510677'){role='admin';currentUser='Aditya';}else if(siswaList[u]&&String(siswaList[u])===p){role='siswa';let n=u.split(' ').map(s=>s.charAt(0).toUpperCase()+s.slice(1)).join(' ');if(u==='rayhan m')n='Rayhan M';if(u==='raihan w')n='Raihan W';if(u==='rasya a')n='Rasya A';if(u==='rasya z')n='Rasya Z';currentUser=n.charAt(0).toUpperCase()+n.slice(1);}else return document.getElementById('loginMsg').innerText='Nama / password salah!';localStorage.setItem('piket_user',currentUser);localStorage.setItem('piket_role',role);Notification.requestPermission();masukApp();}
+async function login() {
+    const u = document.getElementById('username').value.trim().toLowerCase();
+    const p = document.getElementById('password').value.trim();
+    const loginMsg = document.getElementById('loginMsg');
+
+    if (!u || !p) {
+        loginMsg.innerText = 'Nama dan password wajib diisi!';
+        return;
+    }
+
+    // Periksa akun yang diizinkan
+    const isAdmin = u === 'aditya';
+    const isStudent = Object.prototype.hasOwnProperty.call(siswaList, u);
+
+    if (!isAdmin && !isStudent) {
+        loginMsg.innerText = 'Nama pengguna tidak ditemukan!';
+        return;
+    }
+
+    // Samakan username dengan email akun Supabase
+    const email = u.replace(/\s+/g, '') + '@piketin.example';
+
+    try {
+        loginMsg.innerText = 'Sedang masuk...';
+
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email: email,
+            password: p
+        });
+
+        if (error) throw error;
+
+        const metadata = data.user.app_metadata || {};
+        const userRole = metadata.role;
+        const displayName = metadata.display_name;
+
+        // Pastikan hak akses berasal dari metadata Supabase
+        if (
+            (isAdmin && userRole !== 'admin') ||
+            (isStudent && userRole !== 'siswa') ||
+            !displayName
+        ) {
+            await supabaseClient.auth.signOut();
+            throw new Error('Hak akses akun belum diatur di Supabase.');
+        }
+
+        role = userRole;
+        currentUser = displayName;
+
+        localStorage.setItem('piket_user', currentUser);
+        localStorage.setItem('piket_role', role);
+
+        loginMsg.innerText = '';
+
+        if ('Notification' in window) {
+            Notification.requestPermission();
+        }
+
+        masukApp();
+
+    } catch (error) {
+        console.error('Login error:', error);
+        loginMsg.innerText = error.message ===
+            'Hak akses akun belum diatur di Supabase.'
+            ? error.message
+            : 'Nama atau password salah. Periksa akun Supabase!';
+    }
+  }
 function masukApp(){currentUser=localStorage.getItem('piket_user');role=localStorage.getItem('piket_role');if(!currentUser)return;document.getElementById('loginPage').classList.add('hidden');document.getElementById('mainPage').classList.remove('hidden');document.getElementById('userInfo').innerText=currentUser+' • '+role.toUpperCase();if(role==='admin'){document.getElementById('recapTabBtn').classList.remove('hidden');document.getElementById('adminInfoForm').classList.remove('hidden');}renderJadwal();renderInfo();renderRecap();cekJam();initSig();updateBeranda();showTab('beranda');lastInfoCount=JSON.parse(localStorage.getItem('piket_info')||'[]').length;setInterval(()=>{cekJam();cekInfoBaru();},4000);}
 // FIX PALING PENTING: JANGAN CLEAR SEMUA!
 function logout(){localStorage.removeItem('piket_user');localStorage.removeItem('piket_role');location.reload();}
