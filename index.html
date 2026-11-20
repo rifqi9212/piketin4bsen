@@ -132,10 +132,7 @@ async function login() {
 
     } catch (error) {
         console.error('Login error:', error);
-        loginMsg.innerText = error.message ===
-            'Hak akses akun belum diatur di Supabase.'
-            ? error.message
-            : 'Nama atau password salah. Periksa akun Supabase!';
+        loginMsg.innerText = error.message;
     }
   }
 function masukApp(){currentUser=localStorage.getItem('piket_user');role=localStorage.getItem('piket_role');if(!currentUser)return;document.getElementById('loginPage').classList.add('hidden');document.getElementById('mainPage').classList.remove('hidden');document.getElementById('userInfo').innerText=currentUser+' • '+role.toUpperCase();if(role==='admin'){document.getElementById('recapTabBtn').classList.remove('hidden');document.getElementById('adminInfoForm').classList.remove('hidden');}renderJadwal();renderInfo();renderRecap();cekJam();initSig();updateBeranda();showTab('beranda');lastInfoCount=JSON.parse(localStorage.getItem('piket_info')||'[]').length;setInterval(()=>{cekJam();cekInfoBaru();},4000);}
