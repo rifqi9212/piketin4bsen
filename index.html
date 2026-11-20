@@ -108,9 +108,9 @@ async function login() {
 
         // Pastikan hak akses berasal dari metadata Supabase
         if (
-            (isAdmin && userRole !== 'admin') ||
-            (isStudent && userRole !== 'siswa') ||
-            !displayName
+            (isAdmin && userRole == 'admin') ||
+            (isStudent && userRole == 'siswa') ||
+            displayName
         ) {
             await supabaseClient.auth.signOut();
             throw new Error('Hak akses akun belum diatur di Supabase.');
