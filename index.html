@@ -63,6 +63,9 @@
 const siswaList={"alfajri":1,"ainiya":2,"aji":3,"amira":4,"aurel":5,"bayu":6,"chanisa":7,"charisya":8,"daffa":9,"deidan":10,"dzaky":11,"farizt":12,"fellysita":13,"ivander":14,"jhonatan":15,"nadia":16,"kemal":17,"kiara":18,"lintang":19,"tegar":20,"ayoem":21,"rayhan m":22,"rifqi":23,"roman":24,"alfiara":25,"nazila":26,"neysha":27,"hamidah":28,"raihan w":29,"raisa":30,"rasya a":31,"rasya z":32,"reza":33,"septiana":34,"zaidan":35,"zilfanny":36};
 const jadwal={"Senin":["Ayoem","Kiara","Lintang","Septiana","Ainiya","Aji","Farizt","Daffa"],"Selasa":["Aurel","Amira","Bayu","Chanisa","Alfajri","Reza","Zaidan"],"Rabu":["Roman","Rifqi","Rasya Z","Dzaky","Nadia","Nazila","Neysha"],"Kamis":["Ivander","Kemal","Charisya","Tegar","Raisa","Hamidah","Rayhan M"],"Jumat":["Rasya A","Raihan W","Fellysita","Deidan","Zilfanny","Jhonatan","Alfiara"]};
 let currentUser=null,role=null,stream=null,tempFoto=null,tempTtd=null,isDrawing=false,hasDrawn=false,lastInfoCount=0;
+
+let lastInfoId = 0;
+let infoLoaded = false;
 const SUPABASE_URL = "https://hoflilbfdzurnyapihxm.supabase.co";
 const SUPABASE_KEY = "sb_publishable_bqUtArnlUJMdQWhRDlsGmw_lrmc95oz";
 
@@ -165,11 +168,161 @@ function submitAbsen(){if(!tempFoto)return alert('Foto wajib!');if(!tempTtd)retu
 function renderRecap(){let recap=JSON.parse(localStorage.getItem('piket_recap')||'[]');document.querySelector('#recapTable tbody').innerHTML=recap.map(r=>`<tr class="hover:bg-[#f3f7fd]"><td class="p-3"><img src="${r.foto}" class="w-16 h-11 rounded-lg object-cover border"></td><td class="p-3"><img src="${r.ttd}" class="w-24 h-11 bg-white rounded-lg object-contain border"></td><td class="p-3 font-semibold">${r.nama}</td><td class="p-3"><span class="bg-blue-50 text-brand-600 px-2.5 py-1 rounded-full text-[11px] font-bold">${r.hari}</span></td><td class="p-3 text-xs">${r.tanggal}</td><td class="p-3 font-mono text-xs">${r.jam}</td></tr>`).join('');const today=new Date().toLocaleDateString('id-ID');const mine=recap.find(r=>r.nama===currentUser&&r.tanggal===today);document.getElementById('myStatus').innerHTML=mine?`<div class="flex items-center gap-3"><img src="${mine.foto}" class="w-10 h-10 rounded-lg object-cover"><div><p class="font-bold text-emerald-400">Sudah Absen</p><p class="text-[11px] text-white/50">${mine.jam} • ${mine.hari}</p></div></div>`:'<span class="text-amber-300">⚠️ Anda belum absen hari ini</span>';}
 function exportExcel(){let recap=JSON.parse(localStorage.getItem('piket_recap')||'[]');if(!recap.length)return alert('Belum ada data');const ws=XLSX.utils.json_to_sheet(recap.map(r=>({Nama:r.nama,Hari:r.hari,Tanggal:r.tanggal,Jam:r.jam})));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Recap');XLSX.writeFile(wb,'Recap_PiketIn_Lengkap.xlsx');}
 function hapusRecap(){if(confirm('Hapus semua recap?')){localStorage.removeItem('piket_recap');renderRecap();}}
-function kirimInfo(){const text=document.getElementById('infoText').value.trim();if(!text)return alert('Isi dahulu!');let infos=JSON.parse(localStorage.getItem('piket_info')||'[]');infos.unshift({id:Date.now(),text,tgl:new Date().toLocaleString('id-ID',{timeZone:'Asia/Jakarta'}),pengirim:currentUser});localStorage.setItem('piket_info',JSON.stringify(infos));document.getElementById('infoText').value='';renderInfo();showNotif(text);if(Notification.permission==='granted')new Notification('📢 Info PiketIn Baru',{body:text});}
-function renderInfo(){let infos=JSON.parse(localStorage.getItem('piket_info')||'[]');document.getElementById('infoCount').innerText=infos.length;document.getElementById('notifBadge').innerText=infos.length;if(infos.length>0)document.getElementById('notifBadge').classList.remove('hidden');document.getElementById('infoList').innerHTML=infos.map(i=>`<div class="bg-white border rounded-[16px] p-5 flex gap-4 shadow-sm"><div class="w-9 h-9 bg-brand-600 text-white rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">${i.pengirim.charAt(0)}</div><div class="flex-1"><div class="flex gap-2 items-center flex-wrap"><p class="font-bold text-sm">${i.pengirim}</p><span class="text-[10px] bg-[#f3f7fd] border px-2 py-0.5 rounded-full">${i.tgl}</span>${role==='admin'?`<button onclick="hapusInfo(${i.id})" class="ml-auto text-[11px] font-bold text-red-500 bg-red-50 border border-red-100 px-3 py-1 rounded-full hover:bg-red-500 hover:text-white transition">🗑 Hapus</button>`:''}</div><p class="text-[14px] text-slate-700 mt-2 leading-relaxed whitespace-pre-wrap">${i.text}</p></div></div>`).join('')||'<div class="bg-white border rounded-[16px] p-10 text-center text-sm text-slate-400">Belum ada pengumuman</div>';}
-function hapusInfo(id){if(role!=='admin')return alert('Hanya admin');if(!confirm('Hapus pengumuman ini permanen?'))return;let infos=JSON.parse(localStorage.getItem('piket_info')||'[]');infos=infos.filter(i=>i.id!==id);localStorage.setItem('piket_info',JSON.stringify(infos));renderInfo();}
+async function kirimInfo() {
+    if (role !== 'admin') return alert('Hanya admin!');
+
+    const text = document.getElementById('infoText').value.trim();
+
+    if (!text) return alert('Isi dahulu!');
+
+    const { data, error } = await supabaseClient
+        .from('piket_pengumuman')
+        .insert({
+            isi: text,
+            pengirim: currentUser
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Gagal mengirim pengumuman:', error);
+        return alert('Pengumuman gagal dikirim: ' + error.message);
+    }
+
+    lastInfoId = Math.max(lastInfoId, Number(data.id));
+    infoLoaded = true;
+
+    document.getElementById('infoText').value = '';
+
+    await renderInfo();
+
+    showNotif(text);
+
+    if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('📢 Info PiketIn Baru', {
+            body: text
+        });
+    }
+
+    alert('Pengumuman berhasil dikirim ke semua perangkat!');
+}
+async function renderInfo() {
+    const { data: infos, error } = await supabaseClient
+        .from('piket_pengumuman')
+        .select('*')
+        .order('id', { ascending: false });
+
+    if (error) {
+        console.error('Gagal mengambil pengumuman:', error);
+        document.getElementById('infoList').innerText =
+            'Gagal memuat pengumuman. Periksa koneksi.';
+        return;
+    }
+
+    if (!infoLoaded) {
+        lastInfoId = infos.length ? Number(infos[0].id) : 0;
+        infoLoaded = true;
+    }
+
+    document.getElementById('infoCount').innerText = infos.length;
+
+    document.getElementById('notifBadge').innerText = infos.length;
+
+    if (infos.length > 0) {
+        document.getElementById('notifBadge').classList.remove('hidden');
+    } else {
+        document.getElementById('notifBadge').classList.add('hidden');
+    }
+
+    document.getElementById('infoList').innerHTML = infos.map(i => `
+        <div class="bg-white border rounded-[16px] p-5 flex gap-4 shadow-sm">
+            <div class="w-9 h-9 bg-brand-600 text-white rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">
+                ${i.pengirim.charAt(0)}
+            </div>
+
+            <div class="flex-1">
+                <div class="flex gap-2 items-center flex-wrap">
+                    <p class="font-bold text-sm">${i.pengirim}</p>
+
+                    <span class="text-[10px] bg-[#f3f7fd] border px-2 py-0.5 rounded-full">
+                        ${new Date(i.created_at).toLocaleString('id-ID', {timeZone:'Asia/Jakarta'})}
+                    </span>
+
+                    ${role === 'admin' ? `
+                        <button onclick="hapusInfo(${i.id})"
+                            class="ml-auto text-[11px] font-bold text-red-500 bg-red-50 border border-red-100 px-3 py-1 rounded-full">
+                            🗑 Hapus
+                        </button>
+                    ` : ''}
+                </div>
+
+                <p class="text-[14px] text-slate-700 mt-2 leading-relaxed whitespace-pre-wrap">${i.isi}</p>
+            </div>
+        </div>
+    `).join('') || `
+        <div class="bg-white border rounded-[16px] p-10 text-center text-sm text-slate-400">
+            Belum ada pengumuman
+        </div>
+    `;
+}
+async function hapusInfo(id) {
+    if (role !== 'admin') return alert('Hanya admin!');
+
+    if (!confirm('Hapus pengumuman ini permanen?')) return;
+
+    const { error } = await supabaseClient
+        .from('piket_pengumuman')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
+        console.error('Gagal menghapus pengumuman:', error);
+        return alert('Gagal menghapus: ' + error.message);
+    }
+
+    await renderInfo();
+
+    alert('Pengumuman berhasil dihapus dari semua perangkat.');
+}
 function showNotif(t){document.getElementById('inAppNotifText').innerText=t;const el=document.getElementById('inAppNotif');el.classList.remove('hidden');setTimeout(()=>el.classList.add('hidden'),6000);}
-function cekInfoBaru(){let infos=JSON.parse(localStorage.getItem('piket_info')||'[]');if(infos.length>lastInfoCount){if(infos[0]&&infos[0].pengirim!==currentUser){showNotif(infos[0].text);if(Notification.permission==='granted')new Notification('📢 Info Baru',{body:infos[0].text});}lastInfoCount=infos.length;renderInfo();}}
+async function cekInfoBaru() {
+    const { data: infos, error } = await supabaseClient
+        .from('piket_pengumuman')
+        .select('*')
+        .order('id', { ascending: false });
+
+    if (error) {
+        console.error('Gagal sinkronisasi notifikasi:', error);
+        return;
+    }
+
+    if (!infoLoaded) {
+        lastInfoId = infos.length ? Number(infos[0].id) : 0;
+        infoLoaded = true;
+    } else if (infos.length > 0) {
+
+        const terbaru = infos[0];
+        const newestId = Number(terbaru.id);
+
+        if (newestId > lastInfoId) {
+
+            lastInfoId = newestId;
+
+            if (terbaru.pengirim !== currentUser) {
+                showNotif(terbaru.isi);
+
+                if ('Notification' in window &&
+                    Notification.permission === 'granted') {
+                    new Notification('📢 Info PiketIn Baru', {
+                        body: terbaru.isi
+                    });
+                }
+            }
+        }
+    }
+
+    await renderInfo();
+}
 window.onload=()=>{if(localStorage.getItem('piket_user'))masukApp();}
 </script>
 <canvas id="canvas" class="hidden"></canvas>
