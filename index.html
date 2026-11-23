@@ -63,12 +63,10 @@
 const siswaList={"alfajri":1,"ainiya":2,"aji":3,"amira":4,"aurel":5,"bayu":6,"chanisa":7,"charisya":8,"daffa":9,"deidan":10,"dzaky":11,"farizt":12,"fellysita":13,"ivander":14,"jhonatan":15,"nadia":16,"kemal":17,"kiara":18,"lintang":19,"tegar":20,"ayoem":21,"rayhan m":22,"rifqi":23,"roman":24,"alfiara":25,"nazila":26,"neysha":27,"hamidah":28,"raihan w":29,"raisa":30,"rasya a":31,"rasya z":32,"reza":33,"septiana":34,"zaidan":35,"zilfanny":36};
 const jadwal={"Senin":["Ayoem","Kiara","Lintang","Septiana","Ainiya","Aji","Farizt","Daffa"],"Selasa":["Aurel","Amira","Bayu","Chanisa","Alfajri","Reza","Zaidan"],"Rabu":["Roman","Rifqi","Rasya Z","Dzaky","Nadia","Nazila","Neysha"],"Kamis":["Ivander","Kemal","Charisya","Tegar","Raisa","Hamidah","Rayhan M"],"Jumat":["Rasya A","Raihan W","Fellysita","Deidan","Zilfanny","Jhonatan","Alfiara"]};
 let currentUser=null,role=null,stream=null,tempFoto=null,tempTtd=null,isDrawing=false,hasDrawn=false,lastInfoCount=0;
-
 let lastInfoId = 0;
 let infoLoaded = false;
 const SUPABASE_URL = "https://hoflilbfdzurnyapihxm.supabase.co";
 const SUPABASE_KEY = "sb_publishable_bqUtArnlUJMdQWhRDlsGmw_lrmc95oz";
-
 const supabaseClient = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_KEY
@@ -143,19 +141,64 @@ function masukApp(){currentUser=localStorage.getItem('piket_user');role=localSto
 function logout(){localStorage.removeItem('piket_user');localStorage.removeItem('piket_role');location.reload();}
 function showTab(id){document.querySelectorAll('.tab-content').forEach(c=>{c.classList.add('hidden');c.classList.remove('grid');});const el=document.getElementById(id);if(!el)return;el.classList.remove('hidden');if(id==='jadwal')el.classList.add('grid');document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('bg-white','shadow-sm','border'));const activeBtn=document.getElementById('btn-'+id);if(activeBtn)activeBtn.classList.add('bg-white','shadow-sm','border');if(id==='beranda'){localStorage.setItem('piket_last_seen',Date.now());document.getElementById('notifBadge').classList.add('hidden');updateBeranda();}}
 function renderJadwal(){const now=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Jakarta'}));const map=["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];const today=map[now.getDay()];let html=`<div class="md:col-span-12 bg-brand-600 rounded-[20px] p-6 text-white flex justify-between items-center"><div><p class="text-[11px] tracking-widest font-bold text-blue-200 uppercase">Hari Ini</p><h2 class="text-2xl font-bold mt-1">${today}, ${now.toLocaleDateString('id-ID',{day:'numeric',month:'long'})}</h2></div><div class="text-right"><p class="text-xs text-blue-200">Total Siswa</p><p class="text-2xl font-bold">36</p></div></div>`;for(let d in jadwal){const isToday=d===today;html+=`<div class="md:col-span-4 bg-white rounded-[20px] border p-5 ${isToday?'ring-2 ring-brand-500 shadow-[0_10px_30px_rgba(12,119,240,.15)]':''}"><div class="flex justify-between items-center mb-4"><h4 class="font-bold">${d}</h4><span class="text-[10px] font-bold px-2.5 py-1 rounded-full ${isToday?'bg-brand-600 text-white':'bg-[#f3f7fd] border'}">${isToday?'ON DUTY':jadwal[d].length+' OFF'}</span></div><div class="space-y-2">${jadwal[d].map((n,i)=>`<div class="flex items-center justify-between bg-[#f8fbff] border border-blue-50 rounded-xl px-3 py-2.5"><span class="flex items-center gap-2.5 text-sm font-medium"><span class="w-6 h-6 rounded-full bg-white border flex items-center justify-center text-[10px] font-bold">${i+1}</span>${n}</span><span class="w-2 h-2 rounded-full ${isToday?'bg-emerald-500':'bg-slate-300'}"></span></div>`).join('')}</div></div>`;}document.getElementById('jadwal').innerHTML=html;document.getElementById('hariIni').innerText=today.toUpperCase()+' • LIVE';}
-function updateBeranda(){
-const now=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Jakarta'}));
-const hari=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
-document.getElementById('homeUser').innerText=currentUser||'Pengguna';
-document.getElementById('homeDate').innerText=now.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
-document.getElementById('homeDay').innerText=hari[now.getDay()];
-const recap=JSON.parse(localStorage.getItem('piket_recap')||'[]');
-const todayStr=now.toLocaleDateString('id-ID');
-const mine=recap.find(r=>r.nama===currentUser&&r.tanggal===todayStr);
-const status=document.getElementById('homeAttendanceStatus');
-const detail=document.getElementById('homeAttendanceDetail');
-if(mine){status.innerText='✅ Sudah Piket';status.className='text-xl font-extrabold text-emerald-600 mt-3';detail.innerText='Absensi tercatat pukul '+mine.jam+'.';}
-else{status.innerText='⚠️ Belum Piket';status.className='text-xl font-extrabold text-amber-600 mt-3';detail.innerText='Kamu belum mengirim absensi piket hari ini.';}
+// ===== SUPABASE ABSENSI: helper lintas perangkat =====
+const ABSENSI_TABLE = 'piket_absensi';
+const BUKTI_BUCKET = 'piketin-bukti';
+
+function tanggalLokalISO() {
+  const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function escapeHTML(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  })[ch]);
+}
+async function getCurrentSupabaseUser() {
+  const { data, error } = await supabaseClient.auth.getUser();
+  if (error) throw error;
+  if (!data.user) throw new Error('Sesi login Supabase tidak ditemukan. Silakan logout lalu login kembali.');
+  return data.user;
+}
+async function buatSignedUrl(path) {
+  if (!path) return '';
+  const { data, error } = await supabaseClient.storage
+    .from(BUKTI_BUCKET).createSignedUrl(path, 3600);
+  if (error) throw error;
+  return data.signedUrl;
+}
+async function updateBeranda() {
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+  const hari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  document.getElementById('homeUser').innerText = currentUser || 'Pengguna';
+  document.getElementById('homeDate').innerText = now.toLocaleDateString('id-ID', {day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('homeDay').innerText = hari[now.getDay()];
+
+  const status = document.getElementById('homeAttendanceStatus');
+  const detail = document.getElementById('homeAttendanceDetail');
+  try {
+    const user = await getCurrentSupabaseUser();
+    const { data, error } = await supabaseClient.from(ABSENSI_TABLE)
+      .select('jam,hari,tanggal')
+      .eq('user_id', user.id)
+      .eq('tanggal', tanggalLokalISO())
+      .maybeSingle();
+    if (error) throw error;
+    if (data) {
+      status.innerText = '✅ Sudah Piket';
+      status.className = 'text-xl font-extrabold text-emerald-600 mt-3';
+      detail.innerText = 'Absensi tercatat pukul ' + data.jam + '.';
+    } else {
+      status.innerText = '⚠️ Belum Piket';
+      status.className = 'text-xl font-extrabold text-amber-600 mt-3';
+      detail.innerText = 'Kamu belum mengirim absensi piket hari ini.';
+    }
+  } catch (error) {
+    console.error('Gagal memuat status absensi:', error);
+    status.innerText = 'Status belum dapat dimuat';
+    status.className = 'text-xl font-extrabold text-amber-600 mt-3';
+    detail.innerText = error.message || 'Periksa koneksi dan konfigurasi Supabase.';
+  }
 }
 function cekJam(){const now=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Jakarta'}));const jam=now.getHours()+now.getMinutes()/60;const day=now.getDay();document.getElementById('jamInfo').innerText=now.toLocaleTimeString('id-ID')+' WIB';const ok=(day>=1&&day<=5)&&(jam>=6+20/60&&jam<=16+45/60);const st=document.getElementById('absenStatus');if(!ok){st.innerText='⛔ TUTUP';st.className='text-[10px] font-bold px-3 py-1 rounded-full bg-red-100 text-red-600';}else{st.innerText='● BUKA';st.className='text-[10px] font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700';}return ok;}
 async function startCamera(){if(!cekJam())return alert('Absensi hanya 06:20-16:45 WIB!');stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}});document.getElementById('video').srcObject=stream;document.getElementById('video').classList.remove('hidden');document.getElementById('placeholderCam').classList.add('hidden');document.getElementById('btnKamera').classList.add('hidden');document.getElementById('btnFoto').classList.remove('hidden');}
@@ -164,7 +207,83 @@ function initSig(){const c=document.getElementById('sigCanvas');const ctx=c.getC
 function clearSig(){document.getElementById('sigCanvas').getContext('2d').clearRect(0,0,500,240);tempTtd=null;hasDrawn=false;document.getElementById('ttdOk').classList.add('hidden');document.getElementById('checkTtd').innerText='❌ Belum';document.getElementById('checkTtd').className='font-bold text-red-300';validate();}
 function saveSig(){if(!hasDrawn)return alert('Tanda tangan dahulu!');tempTtd=document.getElementById('sigCanvas').toDataURL('image/png');document.getElementById('ttdOk').classList.remove('hidden');document.getElementById('checkTtd').innerText='✅ Sudah';document.getElementById('checkTtd').className='font-bold text-emerald-400';validate();}
 function validate(){const b=document.getElementById('btnSubmitAbsen');if(tempFoto&&tempTtd){b.disabled=false;b.className='mt-5 w-full bg-brand-600 hover:bg-brand-700 text-white py-4 rounded-xl font-bold text-sm shadow-lg shadow-blue-200 transition';b.innerText='✅ Kirim Absensi Piket';}else{b.disabled=true;b.className='mt-5 w-full bg-white/10 text-white/30 py-4 rounded-xl font-bold text-sm cursor-not-allowed';b.innerText='Lengkapi Foto & TTD Dulu';}}
-function submitAbsen(){if(!tempFoto)return alert('Foto wajib!');if(!tempTtd)return alert('TTD wajib!');const now=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Jakarta'}));const map=["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];let recap=JSON.parse(localStorage.getItem('piket_recap')||'[]');const todayStr=now.toLocaleDateString('id-ID');if(recap.find(r=>r.nama===currentUser&&r.tanggal===todayStr))return alert('Anda sudah absen hari ini!');recap.push({nama:currentUser,hari:map[now.getDay()],tanggal:todayStr,jam:now.toLocaleTimeString('id-ID'),foto:tempFoto,ttd:tempTtd});localStorage.setItem('piket_recap',JSON.stringify(recap));tempFoto=null;tempTtd=null;document.getElementById('preview').classList.add('hidden');document.getElementById('placeholderCam').classList.remove('hidden');document.getElementById('fotoOk').classList.add('hidden');document.getElementById('ttdOk').classList.add('hidden');clearSig();document.getElementById('btnKamera').classList.remove('hidden');document.getElementById('btnFoto').classList.add('hidden');document.getElementById('checkFoto').innerText='✅ Sudah';document.getElementById('checkTtd').innerText='✅ Sudah';validate();renderRecap();updateBeranda();alert('Berhasil! Absensi tersimpan.');}
+async function submitAbsen() {
+  const btn = document.getElementById('btnSubmitAbsen');
+  if (!tempFoto) return alert('Foto wajib!');
+  if (!tempTtd) return alert('Tanda tangan wajib!');
+  if (!cekJam()) return alert('Absensi sedang ditutup.');
+  if (!currentUser || role !== 'siswa') return alert('Hanya akun siswa yang dapat mengirim absensi.');
+
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+  const map = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  const tanggal = tanggalLokalISO();
+  let fotoPath = null, ttdPath = null;
+
+  btn.disabled = true;
+  btn.innerText = 'Mengirim ke server...';
+  try {
+    const user = await getCurrentSupabaseUser();
+
+    const { data: existing, error: checkError } = await supabaseClient
+      .from(ABSENSI_TABLE).select('id')
+      .eq('user_id', user.id).eq('tanggal', tanggal).maybeSingle();
+    if (checkError) throw checkError;
+    if (existing) throw new Error('Anda sudah absen hari ini!');
+
+    const stamp = Date.now();
+    const fotoBlob = await (await fetch(tempFoto)).blob();
+    const ttdBlob = await (await fetch(tempTtd)).blob();
+    fotoPath = `${user.id}/${tanggal}/${stamp}-foto.jpg`;
+    ttdPath = `${user.id}/${tanggal}/${stamp}-ttd.png`;
+
+    const fotoUpload = await supabaseClient.storage.from(BUKTI_BUCKET)
+      .upload(fotoPath, fotoBlob, { contentType: 'image/jpeg', upsert: false });
+    if (fotoUpload.error) throw fotoUpload.error;
+
+    const ttdUpload = await supabaseClient.storage.from(BUKTI_BUCKET)
+      .upload(ttdPath, ttdBlob, { contentType: 'image/png', upsert: false });
+    if (ttdUpload.error) throw ttdUpload.error;
+
+    const { error: insertError } = await supabaseClient.from(ABSENSI_TABLE).insert({
+      user_id: user.id,
+      nama: currentUser,
+      hari: map[now.getDay()],
+      tanggal,
+      jam: now.toLocaleTimeString('id-ID', { hour12: false }),
+      foto_path: fotoPath,
+      ttd_path: ttdPath
+    });
+    if (insertError) throw insertError;
+
+    tempFoto = null;
+    tempTtd = null;
+    document.getElementById('preview').classList.add('hidden');
+    document.getElementById('placeholderCam').classList.remove('hidden');
+    document.getElementById('fotoOk').classList.add('hidden');
+    document.getElementById('ttdOk').classList.add('hidden');
+    clearSig();
+    document.getElementById('btnKamera').classList.remove('hidden');
+    document.getElementById('btnFoto').classList.add('hidden');
+    document.getElementById('checkFoto').innerText = '❌ Belum';
+    document.getElementById('checkTtd').innerText = '❌ Belum';
+    validate();
+    await renderRecap();
+    await updateBeranda();
+    alert('Berhasil! Absensi tersimpan di server dan dapat dilihat admin.');
+  } catch (error) {
+    console.error('Gagal mengirim absensi:', error);
+    // Bersihkan bukti yang sempat terunggah bila penyimpanan baris absensi gagal.
+    const paths = [fotoPath, ttdPath].filter(Boolean);
+    if (paths.length) {
+      const { error: cleanupError } = await supabaseClient.storage.from(BUKTI_BUCKET).remove(paths);
+      if (cleanupError) console.warn('Pembersihan file sementara gagal:', cleanupError);
+    }
+    alert('Absensi gagal dikirim: ' + (error.message || 'Kesalahan tidak diketahui'));
+  } finally {
+    btn.disabled = false;
+    validate();
+  }
+}
 async function renderRecap() {
   const tbody = document.querySelector('#recapTable tbody');
   const myStatus = document.getElementById('myStatus');
