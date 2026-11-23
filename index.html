@@ -165,9 +165,97 @@ function clearSig(){document.getElementById('sigCanvas').getContext('2d').clearR
 function saveSig(){if(!hasDrawn)return alert('Tanda tangan dahulu!');tempTtd=document.getElementById('sigCanvas').toDataURL('image/png');document.getElementById('ttdOk').classList.remove('hidden');document.getElementById('checkTtd').innerText='✅ Sudah';document.getElementById('checkTtd').className='font-bold text-emerald-400';validate();}
 function validate(){const b=document.getElementById('btnSubmitAbsen');if(tempFoto&&tempTtd){b.disabled=false;b.className='mt-5 w-full bg-brand-600 hover:bg-brand-700 text-white py-4 rounded-xl font-bold text-sm shadow-lg shadow-blue-200 transition';b.innerText='✅ Kirim Absensi Piket';}else{b.disabled=true;b.className='mt-5 w-full bg-white/10 text-white/30 py-4 rounded-xl font-bold text-sm cursor-not-allowed';b.innerText='Lengkapi Foto & TTD Dulu';}}
 function submitAbsen(){if(!tempFoto)return alert('Foto wajib!');if(!tempTtd)return alert('TTD wajib!');const now=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Jakarta'}));const map=["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];let recap=JSON.parse(localStorage.getItem('piket_recap')||'[]');const todayStr=now.toLocaleDateString('id-ID');if(recap.find(r=>r.nama===currentUser&&r.tanggal===todayStr))return alert('Anda sudah absen hari ini!');recap.push({nama:currentUser,hari:map[now.getDay()],tanggal:todayStr,jam:now.toLocaleTimeString('id-ID'),foto:tempFoto,ttd:tempTtd});localStorage.setItem('piket_recap',JSON.stringify(recap));tempFoto=null;tempTtd=null;document.getElementById('preview').classList.add('hidden');document.getElementById('placeholderCam').classList.remove('hidden');document.getElementById('fotoOk').classList.add('hidden');document.getElementById('ttdOk').classList.add('hidden');clearSig();document.getElementById('btnKamera').classList.remove('hidden');document.getElementById('btnFoto').classList.add('hidden');document.getElementById('checkFoto').innerText='✅ Sudah';document.getElementById('checkTtd').innerText='✅ Sudah';validate();renderRecap();updateBeranda();alert('Berhasil! Absensi tersimpan.');}
-function renderRecap(){let recap=JSON.parse(localStorage.getItem('piket_recap')||'[]');document.querySelector('#recapTable tbody').innerHTML=recap.map(r=>`<tr class="hover:bg-[#f3f7fd]"><td class="p-3"><img src="${r.foto}" class="w-16 h-11 rounded-lg object-cover border"></td><td class="p-3"><img src="${r.ttd}" class="w-24 h-11 bg-white rounded-lg object-contain border"></td><td class="p-3 font-semibold">${r.nama}</td><td class="p-3"><span class="bg-blue-50 text-brand-600 px-2.5 py-1 rounded-full text-[11px] font-bold">${r.hari}</span></td><td class="p-3 text-xs">${r.tanggal}</td><td class="p-3 font-mono text-xs">${r.jam}</td></tr>`).join('');const today=new Date().toLocaleDateString('id-ID');const mine=recap.find(r=>r.nama===currentUser&&r.tanggal===today);document.getElementById('myStatus').innerHTML=mine?`<div class="flex items-center gap-3"><img src="${mine.foto}" class="w-10 h-10 rounded-lg object-cover"><div><p class="font-bold text-emerald-400">Sudah Absen</p><p class="text-[11px] text-white/50">${mine.jam} • ${mine.hari}</p></div></div>`:'<span class="text-amber-300">⚠️ Anda belum absen hari ini</span>';}
-function exportExcel(){let recap=JSON.parse(localStorage.getItem('piket_recap')||'[]');if(!recap.length)return alert('Belum ada data');const ws=XLSX.utils.json_to_sheet(recap.map(r=>({Nama:r.nama,Hari:r.hari,Tanggal:r.tanggal,Jam:r.jam})));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Recap');XLSX.writeFile(wb,'Recap_PiketIn_Lengkap.xlsx');}
-function hapusRecap(){if(confirm('Hapus semua recap?')){localStorage.removeItem('piket_recap');renderRecap();}}
+async function renderRecap() {
+  const tbody = document.querySelector('#recapTable tbody');
+  const myStatus = document.getElementById('myStatus');
+  try {
+    const user = await getCurrentSupabaseUser();
+    let query = supabaseClient.from(ABSENSI_TABLE)
+      .select('id,user_id,nama,hari,tanggal,jam,foto_path,ttd_path')
+      .order('tanggal', { ascending: false })
+      .order('jam', { ascending: false });
+    if (role !== 'admin') query = query.eq('user_id', user.id);
+
+    const { data: recap, error } = await query;
+    if (error) throw error;
+
+    if (role === 'admin') {
+      const rows = await Promise.all((recap || []).map(async r => {
+        const [fotoUrl, ttdUrl] = await Promise.all([
+          buatSignedUrl(r.foto_path), buatSignedUrl(r.ttd_path)
+        ]);
+        return `<tr class="hover:bg-[#f3f7fd]">
+          <td class="p-3"><img src="${fotoUrl}" class="w-16 h-11 rounded-lg object-cover border" alt="Foto ${escapeHTML(r.nama)}"></td>
+          <td class="p-3"><img src="${ttdUrl}" class="w-24 h-11 bg-white rounded-lg object-contain border" alt="Tanda tangan ${escapeHTML(r.nama)}"></td>
+          <td class="p-3 font-semibold">${escapeHTML(r.nama)}</td>
+          <td class="p-3"><span class="bg-blue-50 text-brand-600 px-2.5 py-1 rounded-full text-[11px] font-bold">${escapeHTML(r.hari)}</span></td>
+          <td class="p-3 text-xs">${new Date(r.tanggal + 'T00:00:00+07:00').toLocaleDateString('id-ID')}</td>
+          <td class="p-3 font-mono text-xs">${escapeHTML(r.jam)}</td>
+        </tr>`;
+      }));
+      tbody.innerHTML = rows.join('') || '<tr><td colspan="6" class="p-6 text-center text-slate-400">Belum ada data absensi.</td></tr>';
+    }
+
+    const mine = (recap || []).find(r => r.tanggal === tanggalLokalISO());
+    if (mine) {
+      myStatus.innerHTML = `<div class="flex items-center gap-3"><div><p class="font-bold text-emerald-400">Sudah Absen</p><p class="text-[11px] text-white/50">${escapeHTML(mine.jam)} • ${escapeHTML(mine.hari)}</p></div></div>`;
+    } else {
+      myStatus.innerHTML = '<span class="text-amber-300">⚠️ Anda belum absen hari ini</span>';
+    }
+  } 
+    catch (error) {
+    console.error('Gagal memuat rekap:', error);
+    if (role === 'admin') tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-red-500">Gagal memuat rekap: ${escapeHTML(error.message)}</td></tr>`;
+    myStatus.innerText = 'Rekap belum dapat dimuat. Periksa koneksi Supabase.';
+  }
+}
+async function exportExcel() {
+  if (role !== 'admin') return alert('Hanya admin yang dapat mengekspor rekap.');
+  try {
+    const { data: recap, error } = await supabaseClient.from(ABSENSI_TABLE)
+      .select('nama,hari,tanggal,jam')
+      .order('tanggal', { ascending: false }).order('jam', { ascending: false });
+    if (error) throw error;
+    if (!recap || !recap.length) return alert('Belum ada data');
+    const ws = XLSX.utils.json_to_sheet(recap.map(r => ({
+      Nama: r.nama, Hari: r.hari,
+      Tanggal: new Date(r.tanggal + 'T00:00:00+07:00').toLocaleDateString('id-ID'),
+      Jam: r.jam
+    })));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Rekap Piket');
+    XLSX.writeFile(wb, 'Rekap_PiketIn.xlsx');
+  } 
+    catch (error) {
+    console.error('Gagal export:', error);
+    alert('Export gagal: ' + error.message);
+  }
+}
+async function hapusRecap() {
+  if (role !== 'admin') return alert('Hanya admin yang dapat menghapus rekap.');
+  if (!confirm('Hapus semua data rekap absensi secara permanen?')) return;
+  try {
+    const { data: rows, error: readError } = await supabaseClient.from(ABSENSI_TABLE)
+      .select('id,foto_path,ttd_path');
+    if (readError) throw readError;
+    if (!rows || !rows.length) return alert('Rekap masih kosong.');
+    const { error: deleteError } = await supabaseClient.from(ABSENSI_TABLE).delete().gte('id', 0);
+    if (deleteError) throw deleteError;
+
+    const paths = rows.flatMap(r => [r.foto_path, r.ttd_path]).filter(Boolean);
+    if (paths.length) {
+      const { error: storageError } = await supabaseClient.storage.from(BUKTI_BUCKET).remove(paths);
+      if (storageError) console.warn('Data rekap terhapus, tetapi sebagian file bukti gagal dihapus:', storageError);
+    }
+    await renderRecap();
+    await updateBeranda();
+    alert('Rekap absensi berhasil dihapus.');
+  } 
+    catch (error) {
+    console.error('Gagal menghapus rekap:', error);
+    alert('Hapus rekap gagal: ' + error.message);
+  }
+}
 async function kirimInfo() {
     if (role !== 'admin') return alert('Hanya admin!');
 
